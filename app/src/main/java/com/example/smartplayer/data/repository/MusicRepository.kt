@@ -99,38 +99,28 @@ class MusicRepository(
             if (android.os.Build.VERSION.SDK_INT >= 29) {
                 selection = buildString {
                     append("${MediaStore.Audio.Media.IS_MUSIC} = 1")
-                    append(" AND ${MediaStore.Audio.Media.IS_RINGTONE} = 0")
-                    append(" AND ${MediaStore.Audio.Media.IS_NOTIFICATION} = 0")
-                    append(" AND ${MediaStore.Audio.Media.IS_ALARM} = 0")
-                    append(" AND ${MediaStore.Audio.Media.RELATIVE_PATH} NOT LIKE ?")
-                    append(" AND ${MediaStore.Audio.Media.RELATIVE_PATH} NOT LIKE ?")
-                    append(" AND ${MediaStore.Audio.Media.RELATIVE_PATH} NOT LIKE ?")
-                    append(" AND ${MediaStore.Audio.Media.RELATIVE_PATH} NOT LIKE ?")
+                    append(" AND (")
+                    append("${MediaStore.Audio.Media.RELATIVE_PATH} LIKE ?")
+                    append(" OR ${MediaStore.Audio.Media.RELATIVE_PATH} LIKE ?")
+                    append(")")
                 }
                 selectionArgs = arrayOf(
-                    "%Notifications/%",
-                    "%Ringtones/%",
-                    "%Alarms/%",
-                    "%Recordings/%"
+                    "Download/netease/cloudmusic/Music/%",
+                    "netease/cloudmusic/Music/%"
                 )
             } else {
                 @Suppress("DEPRECATION")
                 val dataColumn = MediaStore.Audio.Media.DATA
                 selection = buildString {
                     append("${MediaStore.Audio.Media.IS_MUSIC} = 1")
-                    append(" AND ${MediaStore.Audio.Media.IS_RINGTONE} = 0")
-                    append(" AND ${MediaStore.Audio.Media.IS_NOTIFICATION} = 0")
-                    append(" AND ${MediaStore.Audio.Media.IS_ALARM} = 0")
-                    append(" AND $dataColumn NOT LIKE ?")
-                    append(" AND $dataColumn NOT LIKE ?")
-                    append(" AND $dataColumn NOT LIKE ?")
-                    append(" AND $dataColumn NOT LIKE ?")
+                    append(" AND (")
+                    append("$dataColumn LIKE ?")
+                    append(" OR $dataColumn LIKE ?")
+                    append(")")
                 }
                 selectionArgs = arrayOf(
-                    "%/Notifications/%",
-                    "%/Ringtones/%",
-                    "%/Alarms/%",
-                    "%/Recordings/%"
+                    "%/Download/netease/cloudmusic/Music/%",
+                    "%/netease/cloudmusic/Music/%"
                 )
             }
             val sortOrder = "${MediaStore.Audio.Media.TITLE} ASC"

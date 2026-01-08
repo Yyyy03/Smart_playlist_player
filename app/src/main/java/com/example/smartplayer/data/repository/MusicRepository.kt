@@ -75,10 +75,54 @@ class MusicRepository(
                 MediaStore.Audio.Media.ARTIST,
                 MediaStore.Audio.Media.ALBUM,
                 MediaStore.Audio.Media.DURATION,
-                MediaStore.Audio.Media.DATE_ADDED
+                MediaStore.Audio.Media.DATE_ADDED,
+                MediaStore.Audio.Media.MIME_TYPE,
+                MediaStore.Audio.Media.RELATIVE_PATH
             )
 
-            val selection = "${MediaStore.Audio.Media.IS_MUSIC} = 1"
+            val supportedMimeTypes = arrayOf(
+                "audio/mpeg",
+                "audio/flac",
+                "audio/aac"
+            )
+
+            val selection: String
+            val selectionArgs: Array<String>
+            if (android.os.Build.VERSION.SDK_INT >= 29) {
+                selection = buildString {
+                    append("${MediaStore.Audio.Media.IS_MUSIC} = 1")
+                    append(" AND ${MediaStore.Audio.Media.MIME_TYPE} IN (?,?,?)")
+                    append(" AND (")
+                    append("${MediaStore.Audio.Media.RELATIVE_PATH} LIKE ?")
+                    append(" OR ${MediaStore.Audio.Media.RELATIVE_PATH} LIKE ?")
+                    append(")")
+                }
+                selectionArgs = arrayOf(
+                    supportedMimeTypes[0],
+                    supportedMimeTypes[1],
+                    supportedMimeTypes[2],
+                    "netease/cloudmusic/Music/%",
+                    "netease/cloudmusic/Download/%"
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                val dataColumn = MediaStore.Audio.Media.DATA
+                selection = buildString {
+                    append("${MediaStore.Audio.Media.IS_MUSIC} = 1")
+                    append(" AND ${MediaStore.Audio.Media.MIME_TYPE} IN (?,?,?)")
+                    append(" AND (")
+                    append("$dataColumn LIKE ?")
+                    append(" OR $dataColumn LIKE ?")
+                    append(")")
+                }
+                selectionArgs = arrayOf(
+                    supportedMimeTypes[0],
+                    supportedMimeTypes[1],
+                    supportedMimeTypes[2],
+                    "%/netease/cloudmusic/Music/%",
+                    "%/netease/cloudmusic/Download/%"
+                )
+            }
             val sortOrder = "${MediaStore.Audio.Media.TITLE} ASC"
 
             val result = mutableListOf<TrackEntity>()
@@ -86,7 +130,7 @@ class MusicRepository(
                 MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
                 projection,
                 selection,
-                null,
+                selectionArgs,
                 sortOrder
             )?.use { cursor ->
                 val idCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)

@@ -1,10 +1,7 @@
 package com.example.smartplayer.player
 
-import android.Manifest
 import android.content.ComponentName
 import android.content.Context
-import android.os.Build
-import androidx.core.content.ContextCompat
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -16,6 +13,7 @@ import com.example.smartplayer.data.db.TrackEntity
 import com.example.smartplayer.playback.PlaybackService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -57,8 +55,10 @@ class PlayerController(
     val currentIndex: StateFlow<Int> = _currentIndex.asStateFlow()
 
     private val trackMap = mutableMapOf<String, TrackEntity>()
+    private var queueCache: List<TrackEntity> = emptyList()
     private var lastCompletedId: Long? = null
     private var suppressSkipOnce = false
+    private var tickerJob: Job? = null
 
     private val listener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -74,6 +74,7 @@ class PlayerController(
                 }
             }
             updateDurationAndIndex()
+            updateCurrentFromQueue()
         }
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
@@ -87,10 +88,12 @@ class PlayerController(
             val nextId = mediaItem?.mediaId
             _currentTrack.value = if (nextId != null) trackMap[nextId] else null
             updateDurationAndIndex()
+            updateCurrentFromQueue()
         }
 
         override fun onTimelineChanged(timeline: Timeline, reason: Int) {
-            updateQueueFromController()
+            updateDurationAndIndex()
+            updateCurrentFromQueue()
         }
 
         override fun onPositionDiscontinuity(
@@ -113,12 +116,12 @@ class PlayerController(
                 }
             }
             updateDurationAndIndex()
+            updateCurrentFromQueue()
         }
     }
 
     init {
         connect()
-        startPositionUpdates()
     }
 
     private fun connect() {
@@ -132,14 +135,16 @@ class PlayerController(
                 _controller.value = controller
                 _isPlaying.value = controller.isPlaying
                 updateDurationAndIndex()
-                updateQueueFromController()
+                updateCurrentFromQueue()
+                startPositionUpdates()
             },
             executor
         )
     }
 
     private fun startPositionUpdates() {
-        scope.launch {
+        if (tickerJob?.isActive == true) return
+        tickerJob = scope.launch {
             while (isActive) {
                 val controller = _controller.value
                 if (controller != null) {
@@ -158,6 +163,7 @@ class PlayerController(
         suppressSkipOnce = true
         trackMap.clear()
         trackMap[track.id.toString()] = track
+        queueCache = listOf(track)
         _currentTrack.value = track
         _queue.value = listOf(track)
         _currentIndex.value = 0
@@ -173,6 +179,7 @@ class PlayerController(
         suppressSkipOnce = true
         trackMap.clear()
         tracks.forEach { trackMap[it.id.toString()] = it }
+        queueCache = tracks
         val items = tracks.map { buildMediaItem(it) }
         controller.setMediaItems(items, startIndex, 0L)
         controller.prepare()
@@ -246,48 +253,16 @@ class PlayerController(
         _currentIndex.value = controller.currentMediaItemIndex
     }
 
-    private fun updateQueueFromController() {
+    private fun updateCurrentFromQueue() {
         val controller = _controller.value ?: return
-        if (controller.mediaItemCount == 0) return
-        val list = mutableListOf<TrackEntity>()
-        for (i in 0 until controller.mediaItemCount) {
-            val item = controller.getMediaItemAt(i)
-            val fromMap = trackMap[item.mediaId]
-            if (fromMap != null) {
-                list.add(fromMap)
-            } else {
-                val metadata = item.mediaMetadata
-                val id = item.mediaId.toLongOrNull() ?: 0L
-                list.add(
-                    TrackEntity(
-                        id = id,
-                        title = metadata.title?.toString() ?: "Unknown",
-                        artist = metadata.artist?.toString(),
-                        album = metadata.albumTitle?.toString(),
-                        duration = 0L,
-                        uri = item.localConfiguration?.uri?.toString() ?: "",
-                        dateAdded = 0L,
-                        isFavorite = false
-                    )
-                )
-            }
-        }
-        _queue.value = list
-        _currentTrack.value = list.getOrNull(controller.currentMediaItemIndex)
+        val index = controller.currentMediaItemIndex
+        _currentIndex.value = index
+        _queue.value = queueCache
+        _currentTrack.value = queueCache.getOrNull(index)
     }
 
     private fun ensureServiceStarted() {
-        if (canPostNotifications()) {
-            PlaybackService.start(appContext)
-        }
-    }
-
-    private fun canPostNotifications(): Boolean {
-        if (Build.VERSION.SDK_INT < 33) return true
-        return ContextCompat.checkSelfPermission(
-            appContext,
-            Manifest.permission.POST_NOTIFICATIONS
-        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        PlaybackService.start(appContext)
     }
 
     private fun buildMediaItem(track: TrackEntity): MediaItem {

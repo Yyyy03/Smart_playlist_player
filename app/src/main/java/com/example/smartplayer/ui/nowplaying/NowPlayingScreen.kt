@@ -79,14 +79,21 @@ fun NowPlayingScreen(
         Slider(
             value = sliderValue,
             onValueChange = { value ->
-                seeking = true
-                seekPosition = (value * maxDuration).toLong()
+                if (maxDuration > 0L) {
+                    seeking = true
+                    seekPosition = (value * maxDuration).toLong()
+                }
             },
             onValueChangeFinished = {
-                val target = seekPosition
-                seeking = false
-                viewModel.seekTo(target)
+                if (maxDuration > 0L) {
+                    val target = seekPosition
+                    seeking = false
+                    viewModel.seekTo(target)
+                } else {
+                    seeking = false
+                }
             },
+            enabled = maxDuration > 0L,
             modifier = Modifier.fillMaxWidth()
         )
 

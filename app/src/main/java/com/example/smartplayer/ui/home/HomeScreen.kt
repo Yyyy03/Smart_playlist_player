@@ -52,7 +52,6 @@ fun HomeScreen(
     val notificationPermission = requiredNotificationPermission()
     var permissionDenied by remember { mutableStateOf(false) }
     var notificationDenied by remember { mutableStateOf(false) }
-    var pendingPlayAction by remember { mutableStateOf<(() -> Unit)?>(null) }
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -67,19 +66,13 @@ fun HomeScreen(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
         notificationDenied = !granted
-        if (granted) {
-            pendingPlayAction?.invoke()
-        }
-        pendingPlayAction = null
     }
 
     fun requestNotificationThen(action: () -> Unit) {
         if (notificationPermission != null && !hasPermission(context, notificationPermission)) {
-            pendingPlayAction = action
             notificationLauncher.launch(notificationPermission)
-        } else {
-            action()
         }
+        action()
     }
 
     Column(

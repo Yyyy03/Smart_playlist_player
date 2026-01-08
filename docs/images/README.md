@@ -11,4 +11,5 @@ Place screenshots in this folder with the following names:
 1. Run the app on a device or emulator.
 2. Navigate to the target screen.
 3. Use Android Studio > "Take Screenshot" or device key combo.
-4. Save to `docs/images/` with the file names above.
+4. Use 1080x2400 resolution if possible for consistency.
+5. Save to `docs/images/` with the file names above.

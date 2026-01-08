@@ -58,6 +58,8 @@ flowchart TB
 
 Playback state flows from `MediaController` to `PlaybackService` and `ExoPlayer`. `PlayerController` exposes
 state flows to the UI so Now Playing and Home stay in sync with the same source of truth.
+The position ticker lives inside `PlayerController` to keep progress updates aligned with the actual player
+and avoid any UI-side polling drift.
 
 ## Permissions
 - `READ_MEDIA_AUDIO` (Android 13+): read local audio files.

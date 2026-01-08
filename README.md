@@ -97,17 +97,16 @@ and avoid any UI-side polling drift.
 - Confirm a track is playing and the system recognizes the headset as a media device.
 
 **Q: Xiaomi/澎湃系统/MIUI 后台限制导致停止播放？**
-- 将应用加入“电池优化白名单”或设置为不受限制。
-- 允许自启动与后台运行权限。
+- 将应用加入系统的省电/后台限制豁免名单（设置为“不受限制/允许后台运行”）。
+- 允许应用自启动与后台运行权限。
 - 在最近任务中锁定应用，避免被系统清理。
 
 ## Roadmap
 - [x] Now Playing screen with progress and queue preview
 - [x] Release/AAB/Play Store preparation
-- [ ] Queue editor and drag reorder
-- [ ] Equalizer and audio effects
-- [ ] Rule editor UI for custom playlists
 - [ ] Publish on Play Store
+- [ ] Equalizer / audio effects
+- [ ] Rule editor UI
 
 ## Build & Release (Detailed)
 
@@ -126,9 +125,27 @@ and avoid any UI-side polling drift.
 2. Fill in your keystore path and passwords.
 3. Keep `keystore.properties` and the `.jks` file out of git.
 
+### Create Keystore (keytool)
+```bash
+keytool -genkeypair -v -keystore release.jks -keyalg RSA -keysize 2048 -validity 10000 -alias release
+```
+
+### Path Examples
+- Windows example: `C:/keys/release.jks`
+- macOS example: `/Users/you/keys/release.jks`
+
+### storeFile Recommended Format and Pitfalls
+- Recommended: use an absolute path or a path relative to the project root.
+- Example: `storeFile=../keystore/release.jks`
+- Pitfalls: backslashes on Windows can break parsing; use forward slashes.
+- If using a relative path, verify it resolves from the root project folder.
+
 ### R8 / Proguard
 - Release builds enable minify by default.
 - If a release crash occurs, check the stack trace and add targeted keep rules in `app/proguard-rules.pro`.
+
+### Release Steps (Full Checklist)
+See `docs/store/release_steps.md`.
 
 ## Privacy
 This app does not use network access. It only reads local audio metadata and stores play statistics locally in Room.

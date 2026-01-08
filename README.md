@@ -13,6 +13,8 @@ It is built with Jetpack Compose, Media3 ExoPlayer, Room, and an MVVM + Reposito
 - Tap-to-play list with current track display.
 - Play/pause state synced from Player.Listener.
 - Room database for tracks, playlists, cross refs, and play events.
+- Smart queue generation from local play history.
+- Favorites support for rule weighting.
 
 ## Tech Stack
 - Kotlin
@@ -36,6 +38,7 @@ It is built with Jetpack Compose, Media3 ExoPlayer, Room, and an MVVM + Reposito
 - `PlayerController` owns ExoPlayer and exposes `isPlaying` + `currentTrack` as `StateFlow`.
 - `MainViewModel` coordinates scanning, playback, and logs play events.
 - `MusicRepository` reads MediaStore and stores results into Room.
+- `RuleEngine` scores tracks to build a smart queue.
 
 ## Roadmap
 - Smart rule playlists (by artist, time, skip rate, etc.)
@@ -43,5 +46,6 @@ It is built with Jetpack Compose, Media3 ExoPlayer, Room, and an MVVM + Reposito
 - Background playback and notification controls
 
 ## Changelog
+- 2026-01-08: Smart rules v1 with favorites, skip/complete events, and smart queue playback.
 - 2026-01-08: Added click-to-play list, now playing display, scan state, and play action logging.
 - 2026-01-08: Initial project skeleton and main playback chain.

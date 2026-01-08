@@ -11,5 +11,6 @@ data class TrackEntity(
     val album: String?,
     val duration: Long,
     val uri: String,
-    val dateAdded: Long
+    val dateAdded: Long,
+    val isFavorite: Boolean = false
 )

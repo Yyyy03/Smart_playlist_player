@@ -7,6 +7,8 @@ import android.provider.MediaStore
 import com.example.smartplayer.data.db.AppDatabase
 import com.example.smartplayer.data.db.PlayEventEntity
 import com.example.smartplayer.data.db.TrackEntity
+import com.example.smartplayer.smart.RuleEngine
+import com.example.smartplayer.smart.Scene
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -19,7 +21,8 @@ class MusicRepository(
 
     suspend fun scanLocalMusic() {
         val resolver = context.contentResolver
-        val tracks = queryMediaStore(resolver)
+        val favoriteIds = db.trackDao().getFavoriteIds().toSet()
+        val tracks = queryMediaStore(resolver, favoriteIds)
         db.trackDao().upsertAll(tracks)
     }
 
@@ -33,7 +36,38 @@ class MusicRepository(
         )
     }
 
-    private suspend fun queryMediaStore(resolver: ContentResolver): List<TrackEntity> {
+    suspend fun updateFavorite(trackId: Long, isFavorite: Boolean) {
+        db.trackDao().updateFavorite(trackId, isFavorite)
+    }
+
+    suspend fun generateSmartQueue(scene: Scene, nowMillis: Long): List<TrackEntity> {
+        val since7d = nowMillis - 7L * 24 * 60 * 60 * 1000
+        val since24h = nowMillis - 24L * 60 * 60 * 1000
+
+        val allTracks = db.trackDao().getAllList()
+        if (allTracks.isEmpty()) return emptyList()
+
+        val startCounts = db.playEventDao().getStartCountsSince(since7d)
+        val skipCounts = db.playEventDao().getSkipCountsSince(since7d)
+        val playedIn24h = db.playEventDao().getDistinctStartedTrackIdsSince(since24h)
+
+        val playCountsMap = startCounts.associate { it.trackId to it.count }
+        val skipCountsMap = skipCounts.associate { it.trackId to it.count }
+
+        return RuleEngine.generateQueue(
+            allTracks = allTracks,
+            playCounts7d = playCountsMap,
+            skipCounts7d = skipCountsMap,
+            playedIn24h = playedIn24h.toSet(),
+            scene = scene,
+            nowMillis = nowMillis
+        )
+    }
+
+    private suspend fun queryMediaStore(
+        resolver: ContentResolver,
+        favoriteIds: Set<Long>
+    ): List<TrackEntity> {
         return withContext(Dispatchers.IO) {
             val projection = arrayOf(
                 MediaStore.Audio.Media._ID,
@@ -81,7 +115,8 @@ class MusicRepository(
                         album = album,
                         duration = duration,
                         uri = contentUri.toString(),
-                        dateAdded = dateAdded
+                        dateAdded = dateAdded,
+                        isFavorite = favoriteIds.contains(id)
                     )
                 }
             }

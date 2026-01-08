@@ -4,9 +4,11 @@ import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,10 +16,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.clickable
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -31,6 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.example.smartplayer.data.db.TrackEntity
+import com.example.smartplayer.smart.Scene
 
 @Composable
 fun HomeScreen(viewModel: MainViewModel) {
@@ -39,6 +42,8 @@ fun HomeScreen(viewModel: MainViewModel) {
     val isPlaying by viewModel.isPlaying.collectAsState()
     val currentTrack by viewModel.currentTrack.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
+    val selectedScene by viewModel.selectedScene.collectAsState()
+    val smartQueue by viewModel.smartQueue.collectAsState()
 
     val permission = requiredAudioPermission()
     var permissionDenied by remember { mutableStateOf(false) }
@@ -93,6 +98,40 @@ fun HomeScreen(viewModel: MainViewModel) {
             Text(text = if (isPlaying) "Pause" else "Play")
         }
 
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Scene",
+            style = MaterialTheme.typography.titleMedium
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            sceneButton(
+                scene = Scene.Morning,
+                selectedScene = selectedScene,
+                onClick = viewModel::onSceneSelected
+            )
+            sceneButton(
+                scene = Scene.Commute,
+                selectedScene = selectedScene,
+                onClick = viewModel::onSceneSelected
+            )
+            sceneButton(
+                scene = Scene.Night,
+                selectedScene = selectedScene,
+                onClick = viewModel::onSceneSelected
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Button(
+            onClick = { viewModel.playSmartQueue() },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(text = "Generate Smart Queue & Play")
+        }
+
         if (permissionDenied) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
@@ -109,6 +148,43 @@ fun HomeScreen(viewModel: MainViewModel) {
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyMedium
             )
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Text(
+            text = "Smart Queue",
+            style = MaterialTheme.typography.titleMedium
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        if (smartQueue.isEmpty()) {
+            Text(
+                text = "No smart queue yet. Generate to start.",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(smartQueue) { track ->
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = track.title,
+                                style = MaterialTheme.typography.titleSmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = track.artist ?: "Unknown Artist",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -137,12 +213,25 @@ fun HomeScreen(viewModel: MainViewModel) {
                             .clickable { viewModel.onTrackClicked(track) }
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
-                            Text(
-                                text = track.title,
-                                style = MaterialTheme.typography.titleSmall,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = track.title,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Text(
+                                    text = if (track.isFavorite) "Fav" else "Unfav",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier
+                                        .padding(start = 8.dp)
+                                        .clickable { viewModel.toggleFavorite(track) }
+                                )
+                            }
                             Text(
                                 text = track.artist ?: "Unknown Artist",
                                 style = MaterialTheme.typography.bodySmall
@@ -161,6 +250,23 @@ private fun nowPlayingText(track: TrackEntity?): String {
     } else {
         val artist = track.artist ?: "Unknown Artist"
         "Now Playing: ${track.title} - $artist"
+    }
+}
+
+@Composable
+private fun sceneButton(
+    scene: Scene,
+    selectedScene: Scene,
+    onClick: (Scene) -> Unit
+) {
+    if (scene == selectedScene) {
+        Button(onClick = { onClick(scene) }) {
+            Text(text = scene.name)
+        }
+    } else {
+        OutlinedButton(onClick = { onClick(scene) }) {
+            Text(text = scene.name)
+        }
     }
 }
 

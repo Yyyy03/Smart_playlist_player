@@ -9,6 +9,8 @@ import com.example.smartplayer.data.db.AppDatabase
 import com.example.smartplayer.data.db.TrackEntity
 import com.example.smartplayer.data.repository.MusicRepository
 import com.example.smartplayer.player.PlayerController
+import com.example.smartplayer.smart.Scene
+import com.example.smartplayer.smart.SceneResolver
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,10 +23,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         application,
         AppDatabase::class.java,
         "smart_player.db"
-    ).build()
+    ).addMigrations(AppDatabase.MIGRATION_1_2)
+        .build()
 
     private val repository = MusicRepository(database, application)
-    private val playerController = PlayerController(application)
+    private val playerController = PlayerController(application) { track ->
+        viewModelScope.launch {
+            repository.logPlayEvent(track.id, PlayAction.COMPLETE)
+        }
+    }
 
     val tracks = repository.tracks.stateIn(
         viewModelScope,
@@ -34,6 +41,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val isPlaying: StateFlow<Boolean> = playerController.isPlaying
     val currentTrack: StateFlow<TrackEntity?> = playerController.currentTrack
+
+    private val _selectedScene = MutableStateFlow(
+        SceneResolver.resolve(System.currentTimeMillis())
+    )
+    val selectedScene: StateFlow<Scene> = _selectedScene.asStateFlow()
+
+    private val _smartQueue = MutableStateFlow<List<TrackEntity>>(emptyList())
+    val smartQueue: StateFlow<List<TrackEntity>> = _smartQueue.asStateFlow()
 
     private val _uiState = MutableStateFlow(MainUiState())
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
@@ -76,7 +91,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun onTrackClicked(track: TrackEntity) {
         viewModelScope.launch {
             val isSameTrack = playerController.isCurrentTrack(track)
+            val previous = currentTrack.value
             if (!isSameTrack) {
+                if (previous != null && isPlaying.value) {
+                    val positionMs = playerController.currentPositionMs()
+                    if (positionMs < 15_000) {
+                        repository.logPlayEvent(previous.id, PlayAction.SKIP)
+                    }
+                }
                 playerController.setMedia(track)
                 playerController.play()
                 repository.logPlayEvent(track.id, PlayAction.START)
@@ -90,6 +112,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 playerController.play()
                 repository.logPlayEvent(track.id, PlayAction.START)
             }
+        }
+    }
+
+    fun onSceneSelected(scene: Scene) {
+        _selectedScene.value = scene
+    }
+
+    fun playSmartQueue() {
+        viewModelScope.launch {
+            val nowMillis = System.currentTimeMillis()
+            val queue = repository.generateSmartQueue(selectedScene.value, nowMillis)
+            _smartQueue.value = queue
+            if (queue.isEmpty()) {
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = "Smart queue is empty."
+                )
+                return@launch
+            }
+            playerController.setQueueAndPlay(queue, 0)
+            repository.logPlayEvent(queue[0].id, PlayAction.START)
+        }
+    }
+
+    fun toggleFavorite(track: TrackEntity) {
+        viewModelScope.launch {
+            repository.updateFavorite(track.id, !track.isFavorite)
         }
     }
 

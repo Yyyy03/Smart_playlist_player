@@ -155,7 +155,7 @@ fun HomeScreen(
                     text = if (uiState.isScanning) {
                         stringResource(R.string.scanning)
                     } else {
-                        stringResource(R.string.scan_netease_music)
+                        stringResource(R.string.scan_local_music)
                     }
                 )
             }

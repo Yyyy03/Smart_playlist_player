@@ -6,7 +6,6 @@
     <string name="open_now_playing">打开正在播放</string>
     <string name="open_now_playing_subtitle">完整控制与队列预览</string>
     <string name="scan_local_music">扫描本地音乐</string>
-    <string name="scan_netease_music">扫描网易云音乐</string>
     <string name="scanning">正在扫描…</string>
     <string name="add_local_music">自选添加</string>
     <string name="clear_local_music">清除本地音乐</string>

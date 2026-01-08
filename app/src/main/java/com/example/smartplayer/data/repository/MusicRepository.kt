@@ -91,15 +91,7 @@ class MusicRepository(
                 MediaStore.Audio.Media.ARTIST,
                 MediaStore.Audio.Media.ALBUM,
                 MediaStore.Audio.Media.DURATION,
-                MediaStore.Audio.Media.DATE_ADDED,
-                MediaStore.Audio.Media.MIME_TYPE,
-                MediaStore.Audio.Media.RELATIVE_PATH
-            )
-
-            val supportedMimeTypes = arrayOf(
-                "audio/mpeg",
-                "audio/flac",
-                "audio/aac"
+                MediaStore.Audio.Media.DATE_ADDED
             )
 
             val selection: String
@@ -107,36 +99,38 @@ class MusicRepository(
             if (android.os.Build.VERSION.SDK_INT >= 29) {
                 selection = buildString {
                     append("${MediaStore.Audio.Media.IS_MUSIC} = 1")
-                    append(" AND ${MediaStore.Audio.Media.MIME_TYPE} IN (?,?,?)")
-                    append(" AND (")
-                    append("${MediaStore.Audio.Media.RELATIVE_PATH} LIKE ?")
-                    append(" OR ${MediaStore.Audio.Media.RELATIVE_PATH} LIKE ?")
-                    append(")")
+                    append(" AND ${MediaStore.Audio.Media.IS_RINGTONE} = 0")
+                    append(" AND ${MediaStore.Audio.Media.IS_NOTIFICATION} = 0")
+                    append(" AND ${MediaStore.Audio.Media.IS_ALARM} = 0")
+                    append(" AND ${MediaStore.Audio.Media.RELATIVE_PATH} NOT LIKE ?")
+                    append(" AND ${MediaStore.Audio.Media.RELATIVE_PATH} NOT LIKE ?")
+                    append(" AND ${MediaStore.Audio.Media.RELATIVE_PATH} NOT LIKE ?")
+                    append(" AND ${MediaStore.Audio.Media.RELATIVE_PATH} NOT LIKE ?")
                 }
                 selectionArgs = arrayOf(
-                    supportedMimeTypes[0],
-                    supportedMimeTypes[1],
-                    supportedMimeTypes[2],
-                    "netease/cloudmusic/Music/%",
-                    "netease/cloudmusic/Download/%"
+                    "%Notifications/%",
+                    "%Ringtones/%",
+                    "%Alarms/%",
+                    "%Recordings/%"
                 )
             } else {
                 @Suppress("DEPRECATION")
                 val dataColumn = MediaStore.Audio.Media.DATA
                 selection = buildString {
                     append("${MediaStore.Audio.Media.IS_MUSIC} = 1")
-                    append(" AND ${MediaStore.Audio.Media.MIME_TYPE} IN (?,?,?)")
-                    append(" AND (")
-                    append("$dataColumn LIKE ?")
-                    append(" OR $dataColumn LIKE ?")
-                    append(")")
+                    append(" AND ${MediaStore.Audio.Media.IS_RINGTONE} = 0")
+                    append(" AND ${MediaStore.Audio.Media.IS_NOTIFICATION} = 0")
+                    append(" AND ${MediaStore.Audio.Media.IS_ALARM} = 0")
+                    append(" AND $dataColumn NOT LIKE ?")
+                    append(" AND $dataColumn NOT LIKE ?")
+                    append(" AND $dataColumn NOT LIKE ?")
+                    append(" AND $dataColumn NOT LIKE ?")
                 }
                 selectionArgs = arrayOf(
-                    supportedMimeTypes[0],
-                    supportedMimeTypes[1],
-                    supportedMimeTypes[2],
-                    "%/netease/cloudmusic/Music/%",
-                    "%/netease/cloudmusic/Download/%"
+                    "%/Notifications/%",
+                    "%/Ringtones/%",
+                    "%/Alarms/%",
+                    "%/Recordings/%"
                 )
             }
             val sortOrder = "${MediaStore.Audio.Media.TITLE} ASC"

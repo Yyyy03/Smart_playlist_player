@@ -3,7 +3,9 @@ package com.example.smartplayer.data.repository
 import android.content.ContentResolver
 import android.content.ContentUris
 import android.content.Context
+import android.database.Cursor
 import android.provider.MediaStore
+import android.provider.OpenableColumns
 import com.example.smartplayer.data.db.AppDatabase
 import com.example.smartplayer.data.db.PlayEventEntity
 import com.example.smartplayer.data.db.TrackEntity
@@ -12,6 +14,7 @@ import com.example.smartplayer.smart.Scene
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
+import java.util.Locale
 
 class MusicRepository(
     private val db: AppDatabase,
@@ -38,6 +41,19 @@ class MusicRepository(
 
     suspend fun updateFavorite(trackId: Long, isFavorite: Boolean) {
         db.trackDao().updateFavorite(trackId, isFavorite)
+    }
+
+    suspend fun clearLocalMusic() {
+        db.trackDao().clearAll()
+    }
+
+    suspend fun importFromUris(uris: List<android.net.Uri>) {
+        val resolver = context.contentResolver
+        val favoriteIds = db.trackDao().getFavoriteIds().toSet()
+        val tracks = buildTracksFromUris(resolver, uris, favoriteIds)
+        if (tracks.isNotEmpty()) {
+            db.trackDao().upsertAll(tracks)
+        }
     }
 
     suspend fun generateSmartQueue(scene: Scene, nowMillis: Long): List<TrackEntity> {
@@ -166,5 +182,77 @@ class MusicRepository(
             }
             result
         }
+    }
+
+    private suspend fun buildTracksFromUris(
+        resolver: ContentResolver,
+        uris: List<android.net.Uri>,
+        favoriteIds: Set<Long>
+    ): List<TrackEntity> = withContext(Dispatchers.IO) {
+        val tracks = mutableListOf<TrackEntity>()
+        for (uri in uris) {
+            val mime = resolver.getType(uri)
+            val displayName = queryDisplayName(resolver, uri)
+            if (!isSupportedAudio(mime, displayName)) continue
+
+            val retriever = android.media.MediaMetadataRetriever()
+            try {
+                retriever.setDataSource(context, uri)
+                val title = retriever.extractMetadata(
+                    android.media.MediaMetadataRetriever.METADATA_KEY_TITLE
+                ) ?: displayName ?: "Unknown"
+                val artist = retriever.extractMetadata(
+                    android.media.MediaMetadataRetriever.METADATA_KEY_ARTIST
+                )
+                val album = retriever.extractMetadata(
+                    android.media.MediaMetadataRetriever.METADATA_KEY_ALBUM
+                )
+                val duration = retriever.extractMetadata(
+                    android.media.MediaMetadataRetriever.METADATA_KEY_DURATION
+                )?.toLongOrNull() ?: 0L
+
+                val id = generateLocalId(uri)
+                tracks += TrackEntity(
+                    id = id,
+                    title = title,
+                    artist = artist,
+                    album = album,
+                    duration = duration,
+                    uri = uri.toString(),
+                    dateAdded = System.currentTimeMillis(),
+                    isFavorite = favoriteIds.contains(id)
+                )
+            } catch (_: Exception) {
+                // Ignore unreadable URIs
+            } finally {
+                retriever.release()
+            }
+        }
+        tracks
+    }
+
+    private fun queryDisplayName(resolver: ContentResolver, uri: android.net.Uri): String? {
+        var name: String? = null
+        val cursor: Cursor? = resolver.query(uri, null, null, null, null)
+        cursor?.use {
+            val index = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (index >= 0 && it.moveToFirst()) {
+                name = it.getString(index)
+            }
+        }
+        return name
+    }
+
+    private fun isSupportedAudio(mime: String?, displayName: String?): Boolean {
+        val lowerName = displayName?.lowercase(Locale.ROOT) ?: ""
+        val extOk = lowerName.endsWith(".mp3") || lowerName.endsWith(".flac") || lowerName.endsWith(".aac")
+        val mimeOk = mime == "audio/mpeg" || mime == "audio/flac" || mime == "audio/aac" || mime?.startsWith("audio/") == true
+        return extOk || mimeOk
+    }
+
+    private fun generateLocalId(uri: android.net.Uri): Long {
+        val hash = uri.toString().hashCode()
+        val abs = kotlin.math.abs(hash)
+        return -abs.toLong()
     }
 }

@@ -153,6 +153,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun clearLocalMusic() {
+        viewModelScope.launch {
+            repository.clearLocalMusic()
+        }
+    }
+
+    fun importFromUris(uris: List<android.net.Uri>) {
+        viewModelScope.launch {
+            repository.importFromUris(uris)
+        }
+    }
+
     fun seekTo(positionMs: Long) {
         viewModelScope.launch {
             playerController.seekTo(positionMs)

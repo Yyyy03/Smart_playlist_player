@@ -78,6 +78,14 @@ fun HomeScreen(
         notificationDenied = !granted
     }
 
+    val pickAudioLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            viewModel.importFromUris(uris)
+        }
+    }
+
     fun requestNotificationThen(action: () -> Unit) {
         if (notificationPermission != null && !hasPermission(context, notificationPermission)) {
             notificationLauncher.launch(notificationPermission)
@@ -147,7 +155,7 @@ fun HomeScreen(
                     text = if (uiState.isScanning) {
                         stringResource(R.string.scanning)
                     } else {
-                        stringResource(R.string.scan_local_music)
+                        stringResource(R.string.scan_netease_music)
                     }
                 )
             }
@@ -159,6 +167,23 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(text = if (isPlaying) stringResource(R.string.pause) else stringResource(R.string.play))
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = { pickAudioLauncher.launch(arrayOf("audio/*")) },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(text = stringResource(R.string.add_local_music))
+                }
+                OutlinedButton(
+                    onClick = { viewModel.clearLocalMusic() },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(text = stringResource(R.string.clear_local_music))
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))

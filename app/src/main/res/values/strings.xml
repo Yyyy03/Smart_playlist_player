@@ -1,3 +1,35 @@
 <resources>
-    <string name="app_name">Smart Playlist Player</string>
+    <string name="app_name">智能歌单播放器</string>
+    <string name="home_title">智能歌单播放器</string>
+    <string name="now_playing_none">正在播放：无</string>
+    <string name="now_playing_format">正在播放：%1$s - %2$s</string>
+    <string name="open_now_playing">打开正在播放</string>
+    <string name="open_now_playing_subtitle">完整控制与队列预览</string>
+    <string name="scan_local_music">扫描本地音乐</string>
+    <string name="scanning">正在扫描…</string>
+    <string name="play">播放</string>
+    <string name="pause">暂停</string>
+    <string name="scene">场景</string>
+    <string name="scene_morning">晨间</string>
+    <string name="scene_commute">通勤</string>
+    <string name="scene_night">夜晚</string>
+    <string name="generate_smart_queue">生成智能队列并播放</string>
+    <string name="permission_denied_audio">权限被拒绝，请允许访问本地音频。</string>
+    <string name="permission_denied_notification">通知权限被拒绝，将无法显示播放通知。</string>
+    <string name="error_prefix">错误：</string>
+    <string name="smart_queue">智能队列</string>
+    <string name="smart_queue_empty">暂无智能队列，点击上方生成。</string>
+    <string name="tracks">歌曲库</string>
+    <string name="tracks_empty">暂无歌曲，请先扫描本地音乐。</string>
+    <string name="favorite">已收藏</string>
+    <string name="unfavorite">收藏</string>
+    <string name="now_playing_title">正在播放</string>
+    <string name="now_playing_back">返回</string>
+    <string name="now_playing_up_next">即将播放</string>
+    <string name="now_playing_no_up_next">暂无即将播放的歌曲。</string>
+    <string name="unknown_artist">未知歌手</string>
+    <string name="unknown_album">未知专辑</string>
+    <string name="prev_track">上一首</string>
+    <string name="next_track">下一首</string>
+    <string name="artist_album_placeholder">歌手 / 专辑</string>
 </resources>

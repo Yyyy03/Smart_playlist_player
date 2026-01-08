@@ -36,7 +36,10 @@ import com.example.smartplayer.data.db.TrackEntity
 import com.example.smartplayer.smart.Scene
 
 @Composable
-fun HomeScreen(viewModel: MainViewModel) {
+fun HomeScreen(
+    viewModel: MainViewModel,
+    onOpenNowPlaying: () -> Unit
+) {
     val context = LocalContext.current
     val tracks by viewModel.tracks.collectAsState()
     val isPlaying by viewModel.isPlaying.collectAsState()
@@ -46,7 +49,10 @@ fun HomeScreen(viewModel: MainViewModel) {
     val smartQueue by viewModel.smartQueue.collectAsState()
 
     val permission = requiredAudioPermission()
+    val notificationPermission = requiredNotificationPermission()
     var permissionDenied by remember { mutableStateOf(false) }
+    var notificationDenied by remember { mutableStateOf(false) }
+    var pendingPlayAction by remember { mutableStateOf<(() -> Unit)?>(null) }
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -54,6 +60,25 @@ fun HomeScreen(viewModel: MainViewModel) {
         permissionDenied = !granted
         if (granted) {
             viewModel.scanLocalMusic()
+        }
+    }
+
+    val notificationLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        notificationDenied = !granted
+        if (granted) {
+            pendingPlayAction?.invoke()
+        }
+        pendingPlayAction = null
+    }
+
+    fun requestNotificationThen(action: () -> Unit) {
+        if (notificationPermission != null && !hasPermission(context, notificationPermission)) {
+            pendingPlayAction = action
+            notificationLauncher.launch(notificationPermission)
+        } else {
+            action()
         }
     }
 
@@ -75,6 +100,25 @@ fun HomeScreen(viewModel: MainViewModel) {
         )
         Spacer(modifier = Modifier.height(16.dp))
 
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onOpenNowPlaying() }
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    text = "Open Now Playing",
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Text(
+                    text = "Full controls and queue preview",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         Button(
             onClick = {
                 if (hasPermission(context, permission)) {
@@ -92,7 +136,7 @@ fun HomeScreen(viewModel: MainViewModel) {
         Spacer(modifier = Modifier.height(12.dp))
 
         Button(
-            onClick = { viewModel.togglePlayPause() },
+            onClick = { requestNotificationThen { viewModel.togglePlayPause() } },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(text = if (isPlaying) "Pause" else "Play")
@@ -126,7 +170,7 @@ fun HomeScreen(viewModel: MainViewModel) {
         Spacer(modifier = Modifier.height(12.dp))
 
         Button(
-            onClick = { viewModel.playSmartQueue() },
+            onClick = { requestNotificationThen { viewModel.playSmartQueue() } },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(text = "Generate Smart Queue & Play")
@@ -136,6 +180,15 @@ fun HomeScreen(viewModel: MainViewModel) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Permission denied. Please grant access to scan local audio.",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+
+        if (notificationDenied) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Notification permission denied. Playback will continue without notification.",
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -210,7 +263,7 @@ fun HomeScreen(viewModel: MainViewModel) {
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { viewModel.onTrackClicked(track) }
+                            .clickable { requestNotificationThen { viewModel.onTrackClicked(track) } }
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Row(
@@ -275,6 +328,14 @@ private fun requiredAudioPermission(): String {
         Manifest.permission.READ_MEDIA_AUDIO
     } else {
         Manifest.permission.READ_EXTERNAL_STORAGE
+    }
+}
+
+private fun requiredNotificationPermission(): String? {
+    return if (Build.VERSION.SDK_INT >= 33) {
+        Manifest.permission.POST_NOTIFICATIONS
+    } else {
+        null
     }
 }
 

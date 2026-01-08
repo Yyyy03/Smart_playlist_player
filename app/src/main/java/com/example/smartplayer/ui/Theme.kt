@@ -4,11 +4,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import com.example.smartplayer.ui.home.HomeScreen
 import com.example.smartplayer.ui.home.MainViewModel
+import com.example.smartplayer.ui.nowplaying.NowPlayingScreen
 
 private val LightColors = lightColorScheme(
     primary = Color(0xFF0F766E),
@@ -32,6 +37,17 @@ fun SmartPlayerApp(viewModel: MainViewModel) {
     }
 
     MaterialTheme(colorScheme = LightColors) {
-        HomeScreen(viewModel = viewModel)
+        var showNowPlaying by remember { mutableStateOf(false) }
+        if (showNowPlaying) {
+            NowPlayingScreen(
+                viewModel = viewModel,
+                onBack = { showNowPlaying = false }
+            )
+        } else {
+            HomeScreen(
+                viewModel = viewModel,
+                onOpenNowPlaying = { showNowPlaying = true }
+            )
+        }
     }
 }

@@ -27,11 +27,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         .build()
 
     private val repository = MusicRepository(database, application)
-    private val playerController = PlayerController(application) { track ->
-        viewModelScope.launch {
-            repository.logPlayEvent(track.id, PlayAction.COMPLETE)
+    private val playerController = PlayerController(
+        application,
+        onComplete = { track ->
+            viewModelScope.launch {
+                repository.logPlayEvent(track.id, PlayAction.COMPLETE)
+            }
+        },
+        onSkip = { track ->
+            viewModelScope.launch {
+                repository.logPlayEvent(track.id, PlayAction.SKIP)
+            }
         }
-    }
+    )
 
     val tracks = repository.tracks.stateIn(
         viewModelScope,
@@ -41,6 +49,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val isPlaying: StateFlow<Boolean> = playerController.isPlaying
     val currentTrack: StateFlow<TrackEntity?> = playerController.currentTrack
+    val currentPositionMs: StateFlow<Long> = playerController.currentPositionMs
+    val durationMs: StateFlow<Long> = playerController.durationMs
+    val queue: StateFlow<List<TrackEntity>> = playerController.queue
+    val currentIndex: StateFlow<Int> = playerController.currentIndex
 
     private val _selectedScene = MutableStateFlow(
         SceneResolver.resolve(System.currentTimeMillis())
@@ -138,6 +150,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun toggleFavorite(track: TrackEntity) {
         viewModelScope.launch {
             repository.updateFavorite(track.id, !track.isFavorite)
+        }
+    }
+
+    fun seekTo(positionMs: Long) {
+        viewModelScope.launch {
+            playerController.seekTo(positionMs)
+        }
+    }
+
+    fun skipToNext() {
+        viewModelScope.launch {
+            playerController.skipToNext()
+        }
+    }
+
+    fun skipToPrevious() {
+        viewModelScope.launch {
+            playerController.skipToPrevious()
+        }
+    }
+
+    fun playFromQueue(index: Int) {
+        viewModelScope.launch {
+            playerController.playFromQueue(index)
         }
     }
 

@@ -25,6 +25,9 @@ Thumbs.db
 # APK/AAB
 *.apk
 *.aab
+*.jks
+*.keystore
+keystore.properties
 
 # NDK
 .externalNativeBuild/

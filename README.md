@@ -96,17 +96,39 @@ and avoid any UI-side polling drift.
 **Q: Bluetooth/headset buttons do nothing.**
 - Confirm a track is playing and the system recognizes the headset as a media device.
 
+**Q: Xiaomi/澎湃系统/MIUI 后台限制导致停止播放？**
+- 将应用加入“电池优化白名单”或设置为不受限制。
+- 允许自启动与后台运行权限。
+- 在最近任务中锁定应用，避免被系统清理。
+
 ## Roadmap
 - [x] Now Playing screen with progress and queue preview
+- [x] Release/AAB/Play Store preparation
 - [ ] Queue editor and drag reorder
 - [ ] Equalizer and audio effects
 - [ ] Rule editor UI for custom playlists
-- [ ] Store listing and release build pipeline
 - [ ] Publish on Play Store
 
-## Build and Release
-- Debug: run from Android Studio.
-- Release: configure a keystore and create a signed APK/AAB.
+## Build & Release (Detailed)
+
+### Android Studio
+- Debug APK: Run the `app` configuration.
+- Release APK: Build > Generate Signed Bundle/APK > APK.
+- Release AAB: Build > Generate Signed Bundle/APK > Android App Bundle.
+
+### Command Line
+- Debug APK: `./gradlew assembleDebug`
+- Release APK: `./gradlew assembleRelease`
+- Release AAB: `./gradlew bundleRelease`
+
+### Keystore Setup
+1. Copy `keystore.properties.example` to `keystore.properties`.
+2. Fill in your keystore path and passwords.
+3. Keep `keystore.properties` and the `.jks` file out of git.
+
+### R8 / Proguard
+- Release builds enable minify by default.
+- If a release crash occurs, check the stack trace and add targeted keep rules in `app/proguard-rules.pro`.
 
 ## Privacy
 This app does not use network access. It only reads local audio metadata and stores play statistics locally in Room.

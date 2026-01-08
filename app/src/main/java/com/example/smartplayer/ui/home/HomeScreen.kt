@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.clickable
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
@@ -29,12 +30,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.example.smartplayer.data.db.TrackEntity
 
 @Composable
 fun HomeScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
     val tracks by viewModel.tracks.collectAsState()
     val isPlaying by viewModel.isPlaying.collectAsState()
+    val currentTrack by viewModel.currentTrack.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
 
     val permission = requiredAudioPermission()
     var permissionDenied by remember { mutableStateOf(false) }
@@ -60,6 +64,12 @@ fun HomeScreen(viewModel: MainViewModel) {
         )
         Spacer(modifier = Modifier.height(16.dp))
 
+        Text(
+            text = nowPlayingText(currentTrack),
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
         Button(
             onClick = {
                 if (hasPermission(context, permission)) {
@@ -68,9 +78,10 @@ fun HomeScreen(viewModel: MainViewModel) {
                     launcher.launch(permission)
                 }
             },
+            enabled = !uiState.isScanning,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(text = "Scan Local Music")
+            Text(text = if (uiState.isScanning) "Scanning..." else "Scan Local Music")
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -86,6 +97,15 @@ fun HomeScreen(viewModel: MainViewModel) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Permission denied. Please grant access to scan local audio.",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+
+        if (uiState.errorMessage != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Error: ${uiState.errorMessage}",
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -111,7 +131,11 @@ fun HomeScreen(viewModel: MainViewModel) {
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(tracks) { track ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { viewModel.onTrackClicked(track) }
+                    ) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text(
                                 text = track.title,
@@ -128,6 +152,15 @@ fun HomeScreen(viewModel: MainViewModel) {
                 }
             }
         }
+    }
+}
+
+private fun nowPlayingText(track: TrackEntity?): String {
+    return if (track == null) {
+        "Now Playing: None"
+    } else {
+        val artist = track.artist ?: "Unknown Artist"
+        "Now Playing: ${track.title} - $artist"
     }
 }
 

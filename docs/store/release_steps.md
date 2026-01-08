@@ -32,13 +32,20 @@ adb install -r app/build/outputs/apk/release/app-release.apk
 ```
 
 ## 6) Verify Signature and Version
-- Signature:
+
+### Signature
 ```bash
 apksigner verify --print-certs app/build/outputs/apk/release/app-release.apk
 ```
-- Version:
-```bash
+
+### Version (Windows PowerShell)
+```powershell
 aapt dump badging app/build/outputs/apk/release/app-release.apk | findstr version
+```
+
+### Version (macOS/Linux)
+```bash
+aapt dump badging app/build/outputs/apk/release/app-release.apk | grep version
 ```
 
 ## Notes

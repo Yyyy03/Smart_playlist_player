@@ -10,4 +10,7 @@
     @androidx.room.* <methods>;
 }
 
+# Keep annotation metadata for reflection-based frameworks and release-only issues
+-keepattributes *Annotation*
+
 # If release build crashes, add targeted keep rules for the reported classes here.
